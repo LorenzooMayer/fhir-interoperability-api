@@ -1,0 +1,28 @@
+{
+  "resourceType": "Patient",
+  "identifier": [
+    {
+      "use": "official",
+      "system": "http://rnds.saude.gov.br/fhir/r4/NamingSystem/cpf",
+      "value": "99351819019"
+    },
+    {
+      "system": "http://rnds.saude.gov.br/fhir/r4/NamingSystem/cns",
+      "value": "709501234567893"
+    }
+  ],
+  "active": true,
+  "name": [
+    {
+      "use": "official",
+      "family": "Albuquerque Nunes",
+      "given": ["Beatriz", "Helena"]
+    }
+  ],
+  "telecom": [
+    { "system": "phone", "value": "(51) 95555-6006" },
+    { "system": "email", "value": "beatriz.nunes@exemplo.com" }
+  ],
+  "gender": "female",
+  "birthDate": "1990-06-25"
+}

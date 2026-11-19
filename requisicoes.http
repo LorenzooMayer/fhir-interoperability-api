@@ -1,0 +1,1241 @@
+# Requisicoes prontas para testar o servidor.
+# Funcionam no IntelliJ IDEA (HTTP Client) e no VS Code (extensao REST Client).
+# Suba a aplicacao antes (mvn spring-boot:run) e clique no "play" ao lado de cada requisicao.
+
+@fhir = http://localhost:8080/fhir
+@api = http://localhost:8080/api
+
+### API proprietaria (ja funciona): pacientes no formato do sistema
+GET {{api}}/pacientes
+
+### API proprietaria: sinais vitais do paciente 1
+GET {{api}}/sinais-vitais?pacienteId=1
+
+### FHIR: CapabilityStatement (o que o servidor declara que sabe fazer)
+GET {{fhir}}/metadata
+
+### FHIR: ler Patient
+GET {{fhir}}/Patient/6
+Accept: application/fhir+json
+
+### FHIR: Patient inexistente (esperado 404 com OperationOutcome)
+GET {{fhir}}/Patient/9999
+
+### FHIR: criar Patient (esperado 201 e cabecalho Location)
+POST {{fhir}}/Patient
+Content-Type: application/fhir+json
+
+< ./exemplos/patient-valido.json
+
+### FHIR: criar Patient invalido (esperado 4xx com OperationOutcome)
+POST {{fhir}}/Patient
+Content-Type: application/fhir+json
+
+< ./exemplos/patient-invalido-sem-cpf.json
+
+### FHIR: atualizar Patient/2 (PUT substitui o recurso inteiro; o id do corpo deve ser igual ao da URL)
+PUT {{fhir}}/Patient/2
+Content-Type: application/fhir+json
+
+{
+  "resourceType": "Patient",
+  "id": "2",
+  "identifier": [
+    { "use": "official", "system": "http://rnds.saude.gov.br/fhir/r4/NamingSystem/cpf", "value": "08301661305" }
+  ],
+  "active": true,
+  "name": [ { "use": "official", "family": "Oliveira Santos", "given": ["João", "Pedro"] } ],
+  "telecom": [ { "system": "phone", "value": "(51) 91234-0000" } ],
+  "gender": "male",
+  "birthDate": "1972-11-30"
+}
+
+### FHIR: ler Observation
+GET {{fhir}}/Observation/1
+
+### FHIR: criar Observation
+POST {{fhir}}/Observation
+Content-Type: application/fhir+json
+
+< ./exemplos/observation-valida.json
+
+### FHIR: criar Observation com unidade errada (esperado 4xx)
+POST {{fhir}}/Observation
+Content-Type: application/fhir+json
+
+< ./exemplos/observation-invalida-unidade.json
+
+### FHIR: ler AllergyIntolerance
+GET {{fhir}}/AllergyIntolerance/1
+
+### FHIR: criar AllergyIntolerance
+POST {{fhir}}/AllergyIntolerance
+Content-Type: application/fhir+json
+
+< ./exemplos/allergyintolerance-valida.json
+
+### FHIR: AllergyIntolerance que viola ait-2 (esperado 4xx)
+POST {{fhir}}/AllergyIntolerance
+Content-Type: application/fhir+json
+
+< ./exemplos/allergyintolerance-invalida-ait2.json
+
+
+### FHIR: atualizar Patient/6
+PUT {{fhir}}/Patient/6
+Content-Type: application/fhir+json
+Accept: application/fhir+json
+
+{
+  "resourceType": "Patient",
+  "id": "6",
+  "identifier": [
+    {
+      "use": "official",
+      "system": "http://rnds.saude.gov.br/fhir/r4/NamingSystem/cpf",
+      "value": "99351819019"
+    },
+    {
+      "system": "http://rnds.saude.gov.br/fhir/r4/NamingSystem/cns",
+      "value": "709501234567893"
+    }
+  ],
+  "active": true,
+  "name": [
+    {
+      "use": "official",
+      "family": "Albuquerque Nunes",
+      "given": ["Beatriz", "Helena"]
+    }
+  ],
+  "telecom": [
+    {
+      "system": "phone",
+      "value": "(51) 99999-8888"
+    },
+    {
+      "system": "email",
+      "value": "beatriz.atualizada@exemplo.com"
+    }
+  ],
+  "gender": "female",
+  "birthDate": "1990-06-25"
+}
+
+### Verificar paciente
+GET http://localhost:8080/fhir/Patient/6
+Accept: application/fhir+json
+
+### Criar paciente para testar Observation
+POST http://localhost:8080/fhir/Patient
+Content-Type: application/fhir+json
+Accept: application/fhir+json
+
+{
+  "resourceType": "Patient",
+  "identifier": [
+    {
+      "system": "http://rnds.saude.gov.br/fhir/r4/NamingSystem/cpf",
+      "value": "99351819019"
+    },
+    {
+      "system": "http://rnds.saude.gov.br/fhir/r4/NamingSystem/cns",
+      "value": "709501234567893"
+    }
+  ],
+  "active": true,
+  "name": [
+    {
+      "use": "official",
+      "family": "Nunes",
+      "given": [
+        "Beatriz",
+        "Helena",
+        "Albuquerque"
+      ]
+    }
+  ],
+  "gender": "female",
+  "birthDate": "1990-06-25",
+  "telecom": [
+    {
+      "system": "phone",
+      "value": "(51) 99999-8888"
+    },
+    {
+      "system": "email",
+      "value": "beatriz@exemplo.com"
+    }
+  ]
+}
+
+
+### FHIR - Criar Observation valida
+POST http://localhost:8080/fhir/Observation
+Content-Type: application/fhir+json
+Accept: application/fhir+json
+
+{
+  "resourceType": "Observation",
+  "status": "final",
+  "category": [
+    {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+          "code": "vital-signs",
+          "display": "Vital Signs"
+        }
+      ]
+    }
+  ],
+  "code": {
+    "coding": [
+      {
+        "system": "http://loinc.org",
+        "code": "8867-4",
+        "display": "Heart rate"
+      }
+    ]
+  },
+  "subject": {
+    "reference": "Patient/6"
+  },
+  "effectiveDateTime": "2026-11-06T09:30:00-03:00",
+  "valueQuantity": {
+    "value": 75,
+    "unit": "beats/minute",
+    "system": "http://unitsofmeasure.org",
+    "code": "/min"
+  }
+}
+
+### Consultar Observation existente
+GET http://localhost:8080/fhir/Observation/8
+Accept: application/fhir+json
+
+
+### FHIR - Atualizar Observation existente
+PUT http://localhost:8080/fhir/Observation/8
+Content-Type: application/fhir+json
+Accept: application/fhir+json
+
+{
+  "resourceType": "Observation",
+  "id": "8",
+  "status": "corrected",
+  "category": [
+    {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+          "code": "vital-signs",
+          "display": "Vital Signs"
+        }
+      ]
+    }
+  ],
+  "code": {
+    "coding": [
+      {
+        "system": "http://loinc.org",
+        "code": "8867-4",
+        "display": "Heart rate"
+      }
+    ]
+  },
+  "subject": {
+    "reference": "Patient/6"
+  },
+  "effectiveDateTime": "2026-11-06T09:30:00-03:00",
+  "valueQuantity": {
+    "value": 82,
+    "unit": "beats/minute",
+    "system": "http://unitsofmeasure.org",
+    "code": "/min"
+  }
+}
+
+
+### FHIR - Observation invalida: unidade incompatível
+POST http://localhost:8080/fhir/Observation
+Content-Type: application/fhir+json
+Accept: application/fhir+json
+
+{
+  "resourceType": "Observation",
+  "status": "final",
+  "code": {
+    "coding": [
+      {
+        "system": "http://loinc.org",
+        "code": "8867-4",
+        "display": "Heart rate"
+      }
+    ]
+  },
+  "subject": {
+    "reference": "Patient/6"
+  },
+  "effectiveDateTime": "2026-11-06T09:30:00-03:00",
+  "valueQuantity": {
+    "value": 82,
+    "unit": "kg",
+    "system": "http://unitsofmeasure.org",
+    "code": "kg"
+  }
+}
+
+
+### FHIR - Observation invalida: LOINC nao permitido
+POST http://localhost:8080/fhir/Observation
+Content-Type: application/fhir+json
+Accept: application/fhir+json
+
+{
+  "resourceType": "Observation",
+  "status": "final",
+  "code": {
+    "coding": [
+      {
+        "system": "http://loinc.org",
+        "code": "99999-9",
+        "display": "Codigo de teste invalido"
+      }
+    ]
+  },
+  "subject": {
+    "reference": "Patient/6"
+  },
+  "effectiveDateTime": "2026-11-06T09:30:00-03:00",
+  "valueQuantity": {
+    "value": 75,
+    "unit": "beats/minute",
+    "system": "http://unitsofmeasure.org",
+    "code": "/min"
+  }
+}
+
+
+### FHIR - Observation invalida: sem status
+POST http://localhost:8080/fhir/Observation
+Content-Type: application/fhir+json
+Accept: application/fhir+json
+
+{
+  "resourceType": "Observation",
+  "code": {
+    "coding": [
+      {
+        "system": "http://loinc.org",
+        "code": "8867-4",
+        "display": "Heart rate"
+      }
+    ]
+  },
+  "subject": {
+    "reference": "Patient/6"
+  },
+  "effectiveDateTime": "2026-11-06T09:30:00-03:00",
+  "valueQuantity": {
+    "value": 75,
+    "unit": "beats/minute",
+    "system": "http://unitsofmeasure.org",
+    "code": "/min"
+  }
+}
+
+### FHIR - Observation inexistente
+GET http://localhost:8080/fhir/Observation/9999
+Accept: application/fhir+json
+
+
+### FHIR - Atualizar Observation inexistente
+PUT http://localhost:8080/fhir/Observation/9999
+Content-Type: application/fhir+json
+Accept: application/fhir+json
+
+{
+  "resourceType": "Observation",
+  "id": "9999",
+  "status": "final",
+  "code": {
+    "coding": [
+      {
+        "system": "http://loinc.org",
+        "code": "8867-4",
+        "display": "Heart rate"
+      }
+    ]
+  },
+  "subject": {
+    "reference": "Patient/6"
+  },
+  "effectiveDateTime": "2026-11-06T09:30:00-03:00",
+  "valueQuantity": {
+    "value": 80,
+    "unit": "bpm",
+    "system": "http://unitsofmeasure.org",
+    "code": "/min"
+  }
+}
+
+
+### FHIR - Verificar recursos disponíveis
+GET http://localhost:8080/fhir/metadata
+Accept: application/fhir+json
+
+
+### FHIR - Criar paciente para testes de alergia
+POST http://localhost:8080/fhir/Patient
+Content-Type: application/fhir+json
+Accept: application/fhir+json
+
+{
+  "resourceType": "Patient",
+  "active": true,
+  "identifier": [
+    {
+      "system": "http://rnds.saude.gov.br/fhir/r4/NamingSystem/cpf",
+      "value": "99351819019"
+    },
+    {
+      "system": "http://rnds.saude.gov.br/fhir/r4/NamingSystem/cns",
+      "value": "709501234567893"
+    }
+  ],
+  "name": [
+    {
+      "use": "official",
+      "family": "Nunes",
+      "given": [
+        "Beatriz",
+        "Helena",
+        "Albuquerque"
+      ]
+    }
+  ],
+  "gender": "female",
+  "birthDate": "1990-06-25"
+}
+
+
+### FHIR - Criar alergia valida
+POST http://localhost:8080/fhir/AllergyIntolerance
+Content-Type: application/fhir+json
+Accept: application/fhir+json
+
+{
+  "resourceType": "AllergyIntolerance",
+  "clinicalStatus": {
+    "coding": [
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical",
+        "code": "active",
+        "display": "Active"
+      }
+    ]
+  },
+  "verificationStatus": {
+    "coding": [
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-verification",
+        "code": "confirmed",
+        "display": "Confirmed"
+      }
+    ]
+  },
+  "type": "allergy",
+  "category": [
+    "food"
+  ],
+  "criticality": "high",
+  "code": {
+    "text": "Amendoim"
+  },
+  "patient": {
+    "reference": "Patient/6"
+  },
+  "recordedDate": "2026-11-06",
+  "reaction": [
+    {
+      "manifestation": [
+        {
+          "text": "Edema de glote"
+        }
+      ]
+    }
+  ]
+}
+
+
+### FHIR - Consultar alergia cadastrada
+GET http://localhost:8080/fhir/AllergyIntolerance/5
+Accept: application/fhir+json
+
+
+### FHIR - Atualizar AllergyIntolerance existente
+PUT http://localhost:8080/fhir/AllergyIntolerance/5
+Content-Type: application/fhir+json
+Accept: application/fhir+json
+
+{
+  "resourceType": "AllergyIntolerance",
+  "id": "5",
+  "clinicalStatus": {
+    "coding": [
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical",
+        "code": "resolved"
+      }
+    ]
+  },
+  "verificationStatus": {
+    "coding": [
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-verification",
+        "code": "confirmed"
+      }
+    ]
+  },
+  "type": "allergy",
+  "category": [
+    "food"
+  ],
+  "criticality": "low",
+  "code": {
+    "text": "Amendoim"
+  },
+  "patient": {
+    "reference": "Patient/6"
+  },
+  "recordedDate": "2026-11-06",
+  "reaction": [
+    {
+      "manifestation": [
+        {
+          "text": "Edema de glote"
+        }
+      ]
+    }
+  ]
+}
+
+
+### FHIR - AllergyIntolerance invalida: sem verificationStatus
+POST http://localhost:8080/fhir/AllergyIntolerance
+Content-Type: application/fhir+json
+Accept: application/fhir+json
+
+{
+  "resourceType": "AllergyIntolerance",
+  "clinicalStatus": {
+    "coding": [
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical",
+        "code": "active"
+      }
+    ]
+  },
+  "type": "allergy",
+  "category": [
+    "food"
+  ],
+  "criticality": "high",
+  "code": {
+    "text": "Amendoim"
+  },
+  "patient": {
+    "reference": "Patient/6"
+  },
+  "recordedDate": "2026-11-06"
+}
+
+
+### FHIR - AllergyIntolerance invalida: sem substancia
+POST http://localhost:8080/fhir/AllergyIntolerance
+Content-Type: application/fhir+json
+Accept: application/fhir+json
+
+{
+  "resourceType": "AllergyIntolerance",
+  "clinicalStatus": {
+    "coding": [
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical",
+        "code": "active"
+      }
+    ]
+  },
+  "verificationStatus": {
+    "coding": [
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-verification",
+        "code": "confirmed"
+      }
+    ]
+  },
+  "type": "allergy",
+  "category": [
+    "food"
+  ],
+  "criticality": "high",
+  "patient": {
+    "reference": "Patient/6"
+  },
+  "recordedDate": "2026-11-06"
+}
+
+
+### FHIR - AllergyIntolerance invalida: violacao ait-1
+POST http://localhost:8080/fhir/AllergyIntolerance
+Content-Type: application/fhir+json
+Accept: application/fhir+json
+
+{
+  "resourceType": "AllergyIntolerance",
+  "clinicalStatus": {
+    "coding": [
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical",
+        "code": "active"
+      }
+    ]
+  },
+  "verificationStatus": {
+    "coding": [
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-verification",
+        "code": "entered-in-error"
+      }
+    ]
+  },
+  "type": "allergy",
+  "category": [
+    "medication"
+  ],
+  "code": {
+    "text": "Ibuprofeno"
+  },
+  "patient": {
+    "reference": "Patient/6"
+  },
+  "recordedDate": "2026-11-06"
+}
+
+
+### FHIR - AllergyIntolerance invalida: violacao ait-2
+POST http://localhost:8080/fhir/AllergyIntolerance
+Content-Type: application/fhir+json
+Accept: application/fhir+json
+
+{
+  "resourceType": "AllergyIntolerance",
+  "verificationStatus": {
+    "coding": [
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-verification",
+        "code": "confirmed"
+      }
+    ]
+  },
+  "type": "allergy",
+  "category": [
+    "medication"
+  ],
+  "criticality": "high",
+  "code": {
+    "text": "Dipirona"
+  },
+  "patient": {
+    "reference": "Patient/6"
+  },
+  "recordedDate": "2026-11-06"
+}
+
+
+### FHIR - Consultar AllergyIntolerance inexistente
+GET http://localhost:8080/fhir/AllergyIntolerance/999999
+Accept: application/fhir+json
+
+
+### FHIR - Atualizar AllergyIntolerance inexistente
+PUT http://localhost:8080/fhir/AllergyIntolerance/999999
+Content-Type: application/fhir+json
+Accept: application/fhir+json
+
+{
+  "resourceType": "AllergyIntolerance",
+  "id": "999999",
+  "clinicalStatus": {
+    "coding": [
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical",
+        "code": "active"
+      }
+    ]
+  },
+  "verificationStatus": {
+    "coding": [
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-verification",
+        "code": "confirmed"
+      }
+    ]
+  },
+  "type": "allergy",
+  "category": [
+    "medication"
+  ],
+  "criticality": "high",
+  "code": {
+    "text": "Penicilina"
+  },
+  "patient": {
+    "reference": "Patient/6"
+  },
+  "recordedDate": "2026-11-06"
+}
+
+
+
+### Criar paciente válido
+POST http://localhost:8080/fhir/Patient
+Content-Type: application/fhir+json
+Accept: application/fhir+json
+
+{
+  "resourceType": "Patient",
+  "identifier": [
+    {
+      "use": "official",
+      "system": "http://rnds.saude.gov.br/fhir/r4/NamingSystem/cpf",
+      "value": "99351819019"
+    },
+    {
+      "system": "http://rnds.saude.gov.br/fhir/r4/NamingSystem/cns",
+      "value": "709501234567893"
+    }
+  ],
+  "active": true,
+  "name": [
+    {
+      "use": "official",
+      "family": "Albuquerque Nunes",
+      "given": ["Beatriz", "Helena"]
+    }
+  ],
+  "telecom": [
+    {
+      "system": "phone",
+      "value": "(51) 95555-6006"
+    },
+    {
+      "system": "email",
+      "value": "beatriz.nunes@exemplo.com"
+    }
+  ],
+  "gender": "female",
+  "birthDate": "1990-06-25"
+}
+
+
+### Consultar paciente criado
+GET http://localhost:8080/fhir/Patient/6
+Accept: application/fhir+json
+
+
+### Atualizar paciente existente
+PUT http://localhost:8080/fhir/Patient/6
+Content-Type: application/fhir+json
+Accept: application/fhir+json
+
+{
+  "resourceType": "Patient",
+  "id": "6",
+  "identifier": [
+    {
+      "use": "official",
+      "system": "http://rnds.saude.gov.br/fhir/r4/NamingSystem/cpf",
+      "value": "99351819019"
+    },
+    {
+      "system": "http://rnds.saude.gov.br/fhir/r4/NamingSystem/cns",
+      "value": "709501234567893"
+    }
+  ],
+  "active": true,
+  "name": [
+    {
+      "use": "official",
+      "family": "Albuquerque Nunes",
+      "given": ["Beatriz", "Helena"]
+    }
+  ],
+  "telecom": [
+    {
+      "system": "phone",
+      "value": "(51) 99999-8888"
+    },
+    {
+      "system": "email",
+      "value": "beatriz.nunes@exemplo.com"
+    }
+  ],
+  "gender": "female",
+  "birthDate": "1990-06-25"
+}
+
+
+### Confirmar atualização do paciente
+GET http://localhost:8080/fhir/Patient/6
+Accept: application/fhir+json
+
+
+### Criar Observation válida
+POST http://localhost:8080/fhir/Observation
+Content-Type: application/fhir+json
+Accept: application/fhir+json
+
+{
+  "resourceType": "Observation",
+  "status": "final",
+  "category": [
+    {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+          "code": "vital-signs",
+          "display": "Vital Signs"
+        }
+      ]
+    }
+  ],
+  "code": {
+    "coding": [
+      {
+        "system": "http://loinc.org",
+        "code": "8310-5",
+        "display": "Body temperature"
+      }
+    ],
+    "text": "Temperatura corporal"
+  },
+  "subject": {
+    "reference": "Patient/6"
+  },
+  "effectiveDateTime": "2026-10-23T10:30:00-03:00",
+  "valueQuantity": {
+    "value": 37.9,
+    "unit": "°C",
+    "system": "http://unitsofmeasure.org",
+    "code": "Cel"
+  }
+}
+
+
+### Consultar Observation criada
+GET http://localhost:8080/fhir/Observation/8
+Accept: application/fhir+json
+
+
+### Atualizar Observation existente
+PUT http://localhost:8080/fhir/Observation/8
+Content-Type: application/fhir+json
+Accept: application/fhir+json
+
+{
+  "resourceType": "Observation",
+  "id": "8",
+  "status": "corrected",
+  "category": [
+    {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+          "code": "vital-signs",
+          "display": "Vital Signs"
+        }
+      ]
+    }
+  ],
+  "code": {
+    "coding": [
+      {
+        "system": "http://loinc.org",
+        "code": "8310-5",
+        "display": "Body temperature"
+      }
+    ]
+  },
+  "subject": {
+    "reference": "Patient/6"
+  },
+  "effectiveDateTime": "2026-10-23T10:30:00-03:00",
+  "valueQuantity": {
+    "value": 38.5,
+    "unit": "°C",
+    "system": "http://unitsofmeasure.org",
+    "code": "Cel"
+  }
+}
+
+
+### Confirmar atualização da Observation
+GET http://localhost:8080/fhir/Observation/8
+Accept: application/fhir+json
+
+
+### Testar Observation com UCUM incompatível
+POST http://localhost:8080/fhir/Observation
+Content-Type: application/fhir+json
+Accept: application/fhir+json
+
+{
+  "resourceType": "Observation",
+  "status": "final",
+  "category": [
+    {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+          "code": "vital-signs"
+        }
+      ]
+    }
+  ],
+  "code": {
+    "coding": [
+      {
+        "system": "http://loinc.org",
+        "code": "8310-5",
+        "display": "Body temperature"
+      }
+    ]
+  },
+  "subject": {
+    "reference": "Patient/6"
+  },
+  "effectiveDateTime": "2026-10-23T10:30:00-03:00",
+  "valueQuantity": {
+    "value": 100.2,
+    "unit": "°F",
+    "system": "http://unitsofmeasure.org",
+    "code": "[degF]"
+  }
+}
+
+
+### Observation com paciente inexistente
+POST http://localhost:8080/fhir/Observation
+Content-Type: application/fhir+json
+Accept: application/fhir+json
+
+{
+  "resourceType": "Observation",
+  "status": "final",
+  "category": [
+    {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+          "code": "vital-signs"
+        }
+      ]
+    }
+  ],
+  "code": {
+    "coding": [
+      {
+        "system": "http://loinc.org",
+        "code": "8310-5",
+        "display": "Body temperature"
+      }
+    ]
+  },
+  "subject": {
+    "reference": "Patient/999999"
+  },
+  "effectiveDateTime": "2026-10-23T10:30:00-03:00",
+  "valueQuantity": {
+    "value": 37.9,
+    "unit": "°C",
+    "system": "http://unitsofmeasure.org",
+    "code": "Cel"
+  }
+}
+
+
+### Criar AllergyIntolerance válida
+POST http://localhost:8080/fhir/AllergyIntolerance
+Content-Type: application/fhir+json
+Accept: application/fhir+json
+
+{
+  "resourceType": "AllergyIntolerance",
+  "clinicalStatus": {
+    "coding": [
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical",
+        "code": "active",
+        "display": "Active"
+      }
+    ]
+  },
+  "verificationStatus": {
+    "coding": [
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-verification",
+        "code": "confirmed",
+        "display": "Confirmed"
+      }
+    ]
+  },
+  "type": "allergy",
+  "category": [
+    "food"
+  ],
+  "criticality": "high",
+  "code": {
+    "text": "Amendoim"
+  },
+  "patient": {
+    "reference": "Patient/6"
+  },
+  "recordedDate": "2026-10-20",
+  "reaction": [
+    {
+      "manifestation": [
+        {
+          "text": "Edema de glote"
+        }
+      ]
+    }
+  ]
+}
+
+
+### Consultar AllergyIntolerance criada
+GET http://localhost:8080/fhir/AllergyIntolerance/5
+Accept: application/fhir+json
+
+
+### Atualizar AllergyIntolerance
+PUT http://localhost:8080/fhir/AllergyIntolerance/5
+Content-Type: application/fhir+json
+Accept: application/fhir+json
+
+{
+  "resourceType": "AllergyIntolerance",
+  "id": "5",
+  "clinicalStatus": {
+    "coding": [
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical",
+        "code": "inactive"
+      }
+    ]
+  },
+  "verificationStatus": {
+    "coding": [
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-verification",
+        "code": "confirmed"
+      }
+    ]
+  },
+  "type": "allergy",
+  "category": [
+    "food"
+  ],
+  "criticality": "high",
+  "code": {
+    "text": "Amendoim"
+  },
+  "patient": {
+    "reference": "Patient/6"
+  },
+  "recordedDate": "2026-10-20",
+  "reaction": [
+    {
+      "manifestation": [
+        {
+          "text": "Edema de glote"
+        }
+      ]
+    }
+  ]
+}
+
+
+### Confirmar atualização da alergia
+GET http://localhost:8080/fhir/AllergyIntolerance/5
+Accept: application/fhir+json
+
+
+### Testar AllergyIntolerance inválida - regra ait-1
+POST http://localhost:8080/fhir/AllergyIntolerance
+Content-Type: application/fhir+json
+Accept: application/fhir+json
+
+{
+  "resourceType": "AllergyIntolerance",
+  "clinicalStatus": {
+    "coding": [
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical",
+        "code": "active"
+      }
+    ]
+  },
+  "verificationStatus": {
+    "coding": [
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-verification",
+        "code": "entered-in-error"
+      }
+    ]
+  },
+  "type": "allergy",
+  "category": [
+    "medication"
+  ],
+  "code": {
+    "text": "Ibuprofeno"
+  },
+  "patient": {
+    "reference": "Patient/6"
+  },
+  "recordedDate": "2026-10-20"
+}
+
+
+### Testar AllergyIntolerance inválida - regra ait-2
+POST http://localhost:8080/fhir/AllergyIntolerance
+Content-Type: application/fhir+json
+Accept: application/fhir+json
+
+{
+  "resourceType": "AllergyIntolerance",
+  "verificationStatus": {
+    "coding": [
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-verification",
+        "code": "confirmed"
+      }
+    ]
+  },
+  "type": "allergy",
+  "category": [
+    "medication"
+  ],
+  "code": {
+    "text": "Ibuprofeno"
+  },
+  "patient": {
+    "reference": "Patient/6"
+  },
+  "recordedDate": "2026-10-20"
+}
+
+
+### Testar AllergyIntolerance com paciente inexistente
+POST http://localhost:8080/fhir/AllergyIntolerance
+Content-Type: application/fhir+json
+Accept: application/fhir+json
+
+{
+  "resourceType": "AllergyIntolerance",
+  "clinicalStatus": {
+    "coding": [
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical",
+        "code": "active"
+      }
+    ]
+  },
+  "verificationStatus": {
+    "coding": [
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-verification",
+        "code": "confirmed"
+      }
+    ]
+  },
+  "type": "allergy",
+  "category": [
+    "medication"
+  ],
+  "criticality": "high",
+  "code": {
+    "text": "Ibuprofeno"
+  },
+  "patient": {
+    "reference": "Patient/999999"
+  },
+  "recordedDate": "2026-10-20",
+  "reaction": [
+    {
+      "manifestation": [
+        {
+          "text": "Urticária"
+        }
+      ]
+    }
+  ]
+}
+
+
+### Atualizar Patient inexistente - esperado 404
+PUT http://localhost:8080/fhir/Patient/999999
+Content-Type: application/fhir+json
+Accept: application/fhir+json
+
+{
+  "resourceType": "Patient",
+  "id": "999999",
+  "identifier": [
+    {
+      "use": "official",
+      "system": "http://rnds.saude.gov.br/fhir/r4/NamingSystem/cpf",
+      "value": "99351819019"
+    }
+  ],
+  "active": true,
+  "name": [
+    {
+      "use": "official",
+      "family": "Albuquerque Nunes",
+      "given": ["Beatriz", "Helena"]
+    }
+  ],
+  "gender": "female",
+  "birthDate": "1990-06-25"
+}
+
+
+### Criar Patient com CPF de tamanho inválido
+POST http://localhost:8080/fhir/Patient
+Content-Type: application/fhir+json
+Accept: application/fhir+json
+
+{
+  "resourceType": "Patient",
+  "identifier": [
+    {
+      "use": "official",
+      "system": "http://rnds.saude.gov.br/fhir/r4/NamingSystem/cpf",
+      "value": "123456789"
+    }
+  ],
+  "active": true,
+  "name": [
+    {
+      "use": "official",
+      "family": "Silva",
+      "given": ["Teste"]
+    }
+  ],
+  "gender": "male",
+  "birthDate": "2000-01-15"
+}
